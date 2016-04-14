@@ -1,0 +1,202 @@
+#!/bin/bash
+
+config_file=mr.cfg
+if [ ! -z $1 ]; then
+    config_file=$1
+fi
+
+# hadoop mapreduce relate
+hadoop_path=''
+hadoop_lib=''
+input_list=''
+inputformat=''
+files=''
+eggs=''
+output_dir=''
+outputformat='text'
+overwrite='no'
+numreducetasks=1
+nummaptasks=''
+memlimit=''
+priority=''
+
+section=''
+
+# hbase relate
+input_table=''
+output_table=''
+hbase_input=''
+hbase_output=''
+hbase_inputformat='com.dumbomr.mapred.TypedBytesTableInputFormat'
+hbase_outputformat='com.dumbomr.mapred.TypedBytesTableOutputFormat'
+zk=''
+tablecolumns=''
+columnfamilies=''
+outputtable=''
+hbase_jar='hbase-dumbo.jar'
+
+
+function get_value {                                                            
+    echo ${1##*=}                                                               
+}                                                                               
+                                                                                
+function get_pair {                                                             
+    key=${1%%=*}                                                                
+    value=${1##*=}                                                              
+} 
+
+function set_para {
+    if [[ $1 == 'hadoop_path' ]]; then
+        hadoop_path=$2
+
+    elif [[ $1 == 'hadoop_lib' ]]; then
+        hadoop_lib=$2
+
+    elif [[ $1 == 'inputformat' ]]; then
+        inputformat=$2
+
+    elif [[ $1 == 'outputformat' ]]; then
+        outputformat=$2
+
+    elif [[ $1 == 'overwrite' ]]; then
+        overwrite=$2
+
+    elif [[ $1 == 'nummaptasks' ]]; then
+        nummaptasks=$2
+
+    elif [[ $1 == 'numreducetasks' ]]; then
+        numreducetasks=$2
+
+    elif [[ $1 == 'memlimit' ]]; then
+        memlimit=$2
+
+    elif [[ $1 == 'priority' ]]; then
+        priority=$2
+
+    elif [[ $1 == 'output_dir' ]]; then
+        output_dir=$2
+
+    elif [[ $1 == 'main_file' ]]; then
+        main_file=$2
+
+    elif [[ $1 == 'hbase_input' ]]; then
+        hbase_input=$2
+
+    elif [[ $1 == 'hbase_output' ]]; then
+        hbase_output=$2
+
+    elif [[ $1 == 'input_table' ]]; then
+        input_table=$2
+
+    elif [[ $1 == 'columnfamilies' ]]; then
+        columnfamilies="columnfamilies="$2
+
+    elif [[ $1 == 'output_table' ]]; then
+        output_table='hbase.mapred.outputtable="'$2'"'
+
+    elif [[ $1 == 'hbase.zookeeper.quorum' ]]; then
+        zk="hbase.zookeeper.quorum="$2
+
+    elif [[ $1 == 'hbase.mapred.tablecolumns' ]]; then
+        tablecolumns='hbase.mapred.tablecolumns='$2
+    fi
+} 
+
+function set_command {
+    if [[ -z $1 ]]; then
+        echo ""
+    else
+        echo "$2 $1"
+    fi
+}
+
+while read line; do
+    # '#' pass
+    if [[ "$line" =~ ^# ]]; then
+        continue
+    fi
+    
+    #[[ "$line" =~ ^# ]] && continue
+
+    # '[]' section
+    if [[ "$line" =~ ^\[ ]]; then
+        section=`echo $line | cut -d[ -f2 | cut -d] -f1 `
+        continue
+    fi
+
+    # content
+    if [[ $section == 'dependence' ]]; then
+        new_file=$(get_value $line)
+        files="$files $new_file"
+    
+    elif [[ $section == 'libegg' ]]; then
+        new_egg=$(get_value $line)
+        eggs="$eggs $new_egg"
+
+    elif [[ $section == 'input' ]]; then
+        new_path=$(get_value $line)
+        input_list="$input_list $new_path"
+
+    elif [[ $section == 'dumbo' ]]; then
+        get_pair $line
+        set_para $key $value
+
+    elif [[ $section == 'hbase' ]]; then
+        get_pair $line
+        set_para $key $value
+
+    fi
+done < $config_file
+
+
+dumbo_command="dumbo start $main_file"
+dumbo_command="$dumbo_command $(set_command "$hadoop_path" -hadoop)"
+dumbo_command="$dumbo_command $(set_command "$hadoop_lib" -hadooplib)"
+
+if [[ $hbase_input == 'yes' ]]; then
+    dumbo_command="$dumbo_command $(set_command "$hbase_inputformat" -inputformat)"
+    dumbo_command="$dumbo_command $(set_command "$input_table" -input)"
+    dumbo_command="$dumbo_command $(set_command "$tablecolumns" -hadoopconf)"
+    dumbo_command="$dumbo_command $(set_command "$columnfamilies" -hadoopconf)"
+else
+    dumbo_command="$dumbo_command $(set_command "$inputformat" -inputformat)"
+    for input in $input_list
+    do
+        dumbo_command="$dumbo_command $(set_command "$input" -input)"
+    done
+fi
+
+if [[ $hbase_output == 'yes' ]]; then
+    dumbo_command="$dumbo_command $(set_command "$output_table" -hadoopconf)"
+    dumbo_command="$dumbo_command $(set_command "$hbase_outputformat" -outputformat)"
+else
+    dumbo_command="$dumbo_command $(set_command "$outputformat" -outputformat)"
+fi
+
+dumbo_command="$dumbo_command $(set_command "$output_dir" -output)"
+
+if [[ $hbase_input == 'yes' || $hbase_output == 'yes' ]]; then
+    dumbo_command="$dumbo_command $(set_command "$zk" -hadoopconf)"
+    dumbo_command="$dumbo_command $(set_command "$hbase_jar" -libjar)"
+fi
+
+
+for file in $files
+do
+    dumbo_command="$dumbo_command $(set_command "$file" -file)"
+done
+
+for egg in $eggs
+do
+    dumbo_command="$dumbo_command $(set_command "$egg" -libegg)"
+done
+
+
+dumbo_command="$dumbo_command $(set_command "$overwrite" -overwrite)"
+dumbo_command="$dumbo_command $(set_command "$nummaptasks" -nummaptasks)"
+dumbo_command="$dumbo_command $(set_command "$numreducetasks" -numreducetasks)"
+dumbo_command="$dumbo_command $(set_command "$memlimit" -memlimit)"
+dumbo_command="$dumbo_command $(set_command "$priority" -priority)"
+
+echo $dumbo_command
+$dumbo_command

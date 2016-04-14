@@ -1,0 +1,10 @@
+jenkins jar包下载地址
+http://dmz.jenkins.com/job/dumbo-mapreduce/lastSuccessfulBuild/artifact/target/dumbomr-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+
+dumbo doc:
+https://github.com/klbostee/dumbo/wiki
+http://dumbotics.com/
+
+
+dumbo hbase jar source code
+http://git.bdp.cc/chaopeng1/dumbo-mr.git
