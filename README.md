@@ -45,45 +45,7 @@ if __name__ == "__main__":
 I wrote a script to create dumbo command to make it easier to remember.
 All you have to do is copy a config file, and modify some fields.
 
-```
-[input]
-sc=/hbase/pctest
-
-[env]
-hadoop=/usr/local/hadoop-2.4.1/
-#hadoop_path=/usr/local/hadoop-2.4.1/
-#hadoop_path=/opt/hadoop-1.2.1/
-#hadoop_lib=/usr/local/hadoop-2.4.1/share/hadoop/tools/lib/
-hadooplib=/usr/local/hadoop-2.4.1/share/hadoop/tools/lib/
-
-[main]
-main_file=mr.py
-
-#output_dir=/user/hadoop/pc/output
-output=/user/hadoop/pc/output
-outputformat=text
-overwrite=yes
-nummaptasks=1
-numreducetasks=0
-hbase_input=yes
-hbase_output=yes
-memlimit=2048000000
-
-[hbase]
-input=pctest
-output=test
-hbase.zookeeper.quorum=localhost
-hbase.mapred.tablecolumns=f:domain,f:html
-#hbase.mapred.tablecolumns="da:domain"
-#columnfamilies=data
-
-[dependence]
-files=comp_date_cluster.cfg
-
-[libegg]
-libegg=1.egg
-libegg=2.egg
-➜  script git:(master) ✗ cat config.cfg
+```configuration
 [input]
 # hdfs input path, if you have more write more lines, key is useless
 input=/hbase/pctest1
